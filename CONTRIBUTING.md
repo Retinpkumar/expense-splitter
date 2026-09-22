@@ -34,6 +34,22 @@ stays human-only on GitHub.
 See `git-workflow.md` (Claude Code skill) for the full agent-side git behavior
 this drives automatically during Phase 1.
 
+## Backend Environment
+
+The backend uses [`uv`](https://docs.astral.sh/uv/) for dependency and virtualenv
+management — not `pip`/`venv` directly.
+
+```bash
+cd backend
+uv sync              # creates .venv/ and installs dependencies from uv.lock
+uv run pytest        # run tests
+uv run uvicorn app.main:app --reload   # run the dev server
+```
+
+Add dependencies with `uv add <package>` (or `uv add --dev <package>` for
+dev-only deps) — this updates `pyproject.toml` and `uv.lock` together. Don't
+edit either file by hand.
+
 ## Branch Protection (`main`)
 
 - No direct pushes to `main`
