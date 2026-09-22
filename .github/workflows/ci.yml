@@ -20,13 +20,17 @@ jobs:
 
   frontend-build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+      - id: check
+        run: echo "exists=$([ -d frontend ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
+        if: steps.check.outputs.exists == 'true'
         with:
           node-version: "20"
-      - run: npm install
-      - run: npm run build
+      - if: steps.check.outputs.exists == 'true'
+        working-directory: frontend
+        run: npm install
+      - if: steps.check.outputs.exists == 'true'
+        working-directory: frontend
+        run: npm run build
