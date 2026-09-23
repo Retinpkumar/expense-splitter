@@ -179,3 +179,53 @@ stays human-only.
 **Consequences:** Enforced in `AGENTS.md`, `CONTRIBUTING.md`, and
 `.claude/skills/git-workflow.md`. Any commit-message template or tooling
 added later must not auto-inject this trailer.
+
+---
+
+## 10. `users` and `group_members` kept as distinct tables
+
+**Status:** Accepted
+
+**Context:** Issue `feat(db): add models and migrations` flagged this as an
+open call: the locked schema (#6) lists `users` and `group_members` as
+separate tables, but since there's no auth in v1 (#3), it was worth
+confirming they shouldn't just collapse into one table.
+
+**Decision:** Kept distinct. `users` is a named-person entity (`id`, `name`).
+`group_members` is the per-group join entity (`id`, `group_id` → `groups`,
+`user_id` → `users`, unique on `(group_id, user_id)`). Every other table that
+references a group participant — `expenses.payer_id`, `expense_splits.member_id`,
+`settlements.from_member_id`/`to_member_id` — points at `group_members.id`,
+not `users.id` directly, since API operations (splits, payments, balances)
+are always scoped to one group's membership, not the person globally.
+
+**Consequences:** A `POST /groups/{id}/members` implementation (issue
+`feat(groups): add group creation and membership endpoints`) must decide how
+a submitted `name` resolves to a `users` row — e.g. find-or-create by name,
+or always create a new `users` row per membership — since the current schema
+doesn't dedupe users across groups by name. That decision belongs to that
+issue, not this one.
+
+---
+
+## 11. Backend persistence: SQLAlchemy + Alembic on SQLite (dev/test), swappable via `DATABASE_URL`
+
+**Status:** Accepted
+
+**Context:** Issue `feat(db): add models and migrations` required a concrete
+database engine to generate and run the first migration against; #6 only
+locked the schema, not the engine.
+
+**Decision:** `backend/app/db.py` reads `DATABASE_URL` from the environment,
+defaulting to a local SQLite file (`sqlite:///./expense_splitter.db`).
+SQLite foreign-key enforcement is turned on explicitly (`PRAGMA
+foreign_keys=ON`) since SQLite doesn't enforce it by default. Alembic's
+`env.py` pulls `sqlalchemy.url` from the same `DATABASE_URL`.
+
+**Consequences:** Local dev/tests run against SQLite with zero setup. Moving
+to Postgres (or any other SQLAlchemy-supported engine) for a later
+deployment phase is a config change (`DATABASE_URL`), not a schema or model
+change — but the SQLite-only `PRAGMA foreign_keys=ON` branch in `app/db.py`
+would need revisiting at that point. `backend/*.db` is gitignored; each
+worktree/environment gets its own local file
+(`_docs/PROCESS.md` → "Environment Isolation").
