@@ -138,3 +138,53 @@ def test_settlement_for_missing_group_returns_404(client):
     )
 
     assert response.status_code == 404
+
+
+def test_settlement_rejects_non_positive_amount(client):
+    group, members = _create_group_with_members(client, ["Asha", "Ravi"])
+    asha, ravi = members
+
+    response = client.post(
+        f"/groups/{group['id']}/settlements",
+        json={
+            "from_member_id": ravi["id"],
+            "to_member_id": asha["id"],
+            "amount": "0.00",
+            "currency": "INR",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_settlement_rejects_same_from_and_to_member(client):
+    group, members = _create_group_with_members(client, ["Asha", "Ravi"])
+    asha, _ = members
+
+    response = client.post(
+        f"/groups/{group['id']}/settlements",
+        json={
+            "from_member_id": asha["id"],
+            "to_member_id": asha["id"],
+            "amount": "100.00",
+            "currency": "INR",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_settlement_with_nonexistent_member_returns_422(client):
+    group, _ = _create_group_with_members(client, ["Asha", "Ravi"])
+
+    response = client.post(
+        f"/groups/{group['id']}/settlements",
+        json={
+            "from_member_id": 9999,
+            "to_member_id": 8888,
+            "amount": "100.00",
+            "currency": "INR",
+        },
+    )
+
+    assert response.status_code == 422

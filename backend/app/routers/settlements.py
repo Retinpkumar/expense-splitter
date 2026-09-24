@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -28,6 +29,13 @@ def add_settlement(
         currency=payload.currency,
     )
     db.add(settlement)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="from_member_id or to_member_id does not exist",
+        ) from exc
     db.refresh(settlement)
     return settlement
