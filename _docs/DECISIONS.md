@@ -229,3 +229,48 @@ change — but the SQLite-only `PRAGMA foreign_keys=ON` branch in `app/db.py`
 would need revisiting at that point. `backend/*.db` is gitignored; each
 worktree/environment gets its own local file
 (`_docs/PROCESS.md` → "Environment Isolation").
+
+---
+
+## 12. Frontend stack: Vite + React + TypeScript, React Router, OpenAPI-generated client, plain CSS
+
+**Status:** Accepted
+
+**Context:** Issue `chore(frontend): scaffold React app with API client and
+routing` required a framework/tooling choice for the first time — nothing
+in `frontend/` existed yet, and the issue's `Constraints` explicitly call
+this decision out as needing approval for this task specifically.
+
+**Decision:**
+- **Build tool / language:** Vite + TypeScript (`npm create vite@latest --
+  --template react-ts`). No SSR/file-based routing needed (no auth, no
+  server-rendering requirement), so Next.js would be more than this app
+  needs.
+- **Routing:** `react-router-dom`, via `createBrowserRouter`.
+- **API client:** Generated from the backend's own OpenAPI schema —
+  `openapi-typescript` generates `frontend/src/api/schema.d.ts` from
+  `app.openapi()` (no server needs to be running to generate it, see
+  `frontend/package.json` → `generate:api-types` for the live-server variant
+  used to regenerate after the schema changes), and `openapi-fetch` wraps it
+  into a typed client (`frontend/src/api/client.ts`). This stays in sync
+  with the backend automatically instead of hand-maintained request/response
+  types drifting from `_docs/API.md`.
+- **Styling:** Plain CSS. No component library or design system yet — see
+  `_docs/design_systems.md` (not yet created); that decision is deferred
+  until a feature UI issue actually needs one, per this issue's Out of
+  Scope.
+- **Dev-time CORS:** The FastAPI backend has no CORS middleware (out of
+  scope for a frontend-only issue whose `Constraints` only list the
+  `frontend/` directory). Instead, `frontend/vite.config.ts` proxies
+  `/api/*` to `http://127.0.0.1:8000` during `npm run dev`, so browser
+  requests are same-origin from the frontend's perspective and CORS never
+  enters the picture locally. `VITE_API_BASE_URL` can override this to an
+  absolute URL once a real deployment needs the backend to allow
+  cross-origin requests itself.
+
+**Consequences:** Adding a new backend endpoint requires re-running
+`npm run generate:api-types` (against a running local backend) to pick up
+its types — this is a manual step, not wired into CI or a pre-commit hook.
+A future deployment (frontend and backend on different origins in
+production) will need the backend to add CORS middleware — the dev-time
+proxy does not solve that; it only avoids needing it for local development.
