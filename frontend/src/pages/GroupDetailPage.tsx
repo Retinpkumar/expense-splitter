@@ -16,11 +16,11 @@ type NavigationState = { name?: string; members?: Member[] };
 
 async function loadExpenses(groupId: number): Promise<LoadState<Expense[]>> {
   try {
-    const { data, response } = await apiClient.GET("/groups/{group_id}/expenses", {
+    const { data, error, response } = await apiClient.GET("/groups/{group_id}/expenses", {
       params: { path: { group_id: groupId } },
     });
     if (!response.ok || data === undefined) {
-      return { status: "error", message: "Failed to load expenses" };
+      return { status: "error", message: extractErrorMessage(error) ?? "Failed to load expenses" };
     }
     return { status: "ready", data };
   } catch {
@@ -30,11 +30,11 @@ async function loadExpenses(groupId: number): Promise<LoadState<Expense[]>> {
 
 async function loadBalances(groupId: number): Promise<LoadState<Balances>> {
   try {
-    const { data, response } = await apiClient.GET("/groups/{group_id}/balances", {
+    const { data, error, response } = await apiClient.GET("/groups/{group_id}/balances", {
       params: { path: { group_id: groupId } },
     });
     if (!response.ok || data === undefined) {
-      return { status: "error", message: "Failed to load balances" };
+      return { status: "error", message: extractErrorMessage(error) ?? "Failed to load balances" };
     }
     return { status: "ready", data };
   } catch {
