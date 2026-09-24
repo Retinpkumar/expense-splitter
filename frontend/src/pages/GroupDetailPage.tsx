@@ -59,30 +59,30 @@ export function GroupDetailPage() {
   const [settleError, setSettleError] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
 
-  // Holds whichever groupId the currently-mounted view is actually showing,
-  // so an in-flight request (including the post-settlement balance refresh,
-  // which runs outside this effect) can tell it's stale — either the view
-  // unmounted (cleared to null) or moved on to a different group entirely
-  // (set to that group's id) — before applying its result.
-  const activeGroupIdRef = useRef<number | null>(null);
+  // Monotonic counter identifying the latest load attempt (including the
+  // post-settlement balance refresh, which runs outside this effect).
+  // Comparing a request's own id against the current counter — rather than
+  // against the groupId it was for — correctly discards a stale response
+  // even when it's for the *same* group as the latest request: a fetch
+  // isn't just stale when the group changes, it's stale whenever a newer
+  // fetch has since been issued for any reason (revisiting the same group
+  // before the first request resolved, unmounting, or a settle-triggered
+  // refresh in flight at the same time as the initial load).
+  const latestRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (groupId_ === null) return;
 
-    activeGroupIdRef.current = groupId_;
+    const requestId = ++latestRequestIdRef.current;
     setExpensesState({ status: "loading" });
     setBalancesState({ status: "loading" });
 
     loadExpenses(groupId_).then((result) => {
-      if (activeGroupIdRef.current === groupId_) setExpensesState(result);
+      if (latestRequestIdRef.current === requestId) setExpensesState(result);
     });
     loadBalances(groupId_).then((result) => {
-      if (activeGroupIdRef.current === groupId_) setBalancesState(result);
+      if (latestRequestIdRef.current === requestId) setBalancesState(result);
     });
-
-    return () => {
-      if (activeGroupIdRef.current === groupId_) activeGroupIdRef.current = null;
-    };
   }, [groupId_]);
 
   const memberLabel = makeMemberLabel(navigationState.members ?? []);
@@ -147,8 +147,9 @@ export function GroupDetailPage() {
       }
 
       setSettleAmount("");
+      const requestId = ++latestRequestIdRef.current;
       const result = await loadBalances(groupId_);
-      if (activeGroupIdRef.current === groupId_) setBalancesState(result);
+      if (latestRequestIdRef.current === requestId) setBalancesState(result);
     } catch {
       setSettleError("Failed to record settlement");
     } finally {
