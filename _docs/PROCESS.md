@@ -296,6 +296,31 @@ For each completed issue:
 
 QA does not modify the implementation.
 
+## Code Review
+
+On a QA PASS, before a branch enters the merge queue, the orchestrator runs
+the `code-review` Claude Code skill (`.claude/skills/code-review.md`)
+against the PR's diff. This is the "at least 1 review required before
+merge" gate from `AGENTS.md` / `CONTRIBUTING.md` → "Branch Protection" —
+every PR needs a code-review pass before it merges, whether the reviewer is
+this skill or a human.
+
+1. Run the skill against the branch's diff (or the open PR) — not the whole
+   codebase.
+2. **No findings** ("No high-confidence issues found.") → the branch is
+   clear to merge.
+3. **Findings reported** → they go back to the engineer, same as a QA FAIL:
+   fix in the same worktree/branch, re-run `uv run pytest`, and re-request
+   review. The orchestrator does not fix findings itself and does not merge
+   over an unresolved P0/P1 finding.
+4. A review is scoped to the diff being merged — it does not re-review code
+   an earlier PR already merged into `main`.
+
+This step is independent of QA: QA verifies acceptance criteria; code
+review looks for defects (correctness, data integrity, security,
+contracts, concurrency, reliability, unnecessary complexity) that
+acceptance-criteria testing doesn't necessarily catch.
+
 ## Integration
 
 Branches merge one at a time.
@@ -305,10 +330,11 @@ For each branch:
 2. Run `uv run pytest`.
 3. Run lint/format/type checks once configured.
 4. Run migration checks once a database exists.
-5. Merge only if all required checks pass.
-6. Push `main`.
-7. Close the issue.
-8. Rebase remaining open branches in the current wave onto the new `main`.
+5. Confirm the branch cleared code review (see "Code Review" above).
+6. Merge only if all required checks pass.
+7. Push `main`.
+8. Close the issue.
+9. Rebase remaining open branches in the current wave onto the new `main`.
 
 ### Integration Principle
 
