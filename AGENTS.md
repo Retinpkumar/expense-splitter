@@ -48,6 +48,11 @@ Don't add a dependency without checking with the user first.
 
 - Never commit directly to `main`. All work happens on a feature branch, all
   changes land via PR with at least 1 review and passing CI.
+- The review is the `code-review` Claude Code skill
+  (`.claude/skills/code-review.md`), run against the PR's diff before merge
+  (`_docs/PROCESS.md` → "Code Review"). Findings go back to the engineer,
+  same as a QA FAIL; a PR with no findings ("No high-confidence issues
+  found.") is clear to merge.
 - Before branching, sync `main`:
   ```bash
   git checkout main && git pull origin main
