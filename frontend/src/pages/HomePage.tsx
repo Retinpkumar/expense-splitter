@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "../api/client";
 
 type HealthState =
@@ -39,6 +40,9 @@ export function HomePage() {
       {health.status === "loading" && <p>Checking...</p>}
       {health.status === "ok" && <p data-testid="health-result">{health.body}</p>}
       {health.status === "error" && <p role="alert">{health.message}</p>}
+      <p>
+        <Link to="/groups">Create a group</Link>
+      </p>
     </main>
   );
 }
