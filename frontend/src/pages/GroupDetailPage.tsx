@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { apiClient } from "../api/client";
 import { extractErrorMessage } from "../api/errors";
@@ -59,22 +59,29 @@ export function GroupDetailPage() {
   const [settleError, setSettleError] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
 
+  // Holds whichever groupId the currently-mounted view is actually showing,
+  // so an in-flight request (including the post-settlement balance refresh,
+  // which runs outside this effect) can tell it's stale — either the view
+  // unmounted (cleared to null) or moved on to a different group entirely
+  // (set to that group's id) — before applying its result.
+  const activeGroupIdRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (groupId_ === null) return;
 
-    let cancelled = false;
+    activeGroupIdRef.current = groupId_;
     setExpensesState({ status: "loading" });
     setBalancesState({ status: "loading" });
 
     loadExpenses(groupId_).then((result) => {
-      if (!cancelled) setExpensesState(result);
+      if (activeGroupIdRef.current === groupId_) setExpensesState(result);
     });
     loadBalances(groupId_).then((result) => {
-      if (!cancelled) setBalancesState(result);
+      if (activeGroupIdRef.current === groupId_) setBalancesState(result);
     });
 
     return () => {
-      cancelled = true;
+      if (activeGroupIdRef.current === groupId_) activeGroupIdRef.current = null;
     };
   }, [groupId_]);
 
@@ -140,7 +147,8 @@ export function GroupDetailPage() {
       }
 
       setSettleAmount("");
-      setBalancesState(await loadBalances(groupId_));
+      const result = await loadBalances(groupId_);
+      if (activeGroupIdRef.current === groupId_) setBalancesState(result);
     } catch {
       setSettleError("Failed to record settlement");
     } finally {
@@ -156,6 +164,12 @@ export function GroupDetailPage() {
       </main>
     );
   }
+
+  const memberOptions = knownMemberIds.map((id) => (
+    <option key={id} value={id}>
+      {memberLabel(id)}
+    </option>
+  ));
 
   return (
     <main>
@@ -212,11 +226,7 @@ export function GroupDetailPage() {
                 required
               >
                 <option value="">Select member</option>
-                {knownMemberIds.map((id) => (
-                  <option key={id} value={id}>
-                    {memberLabel(id)}
-                  </option>
-                ))}
+                {memberOptions}
               </select>
             </label>
 
@@ -230,11 +240,7 @@ export function GroupDetailPage() {
                 required
               >
                 <option value="">Select member</option>
-                {knownMemberIds.map((id) => (
-                  <option key={id} value={id}>
-                    {memberLabel(id)}
-                  </option>
-                ))}
+                {memberOptions}
               </select>
             </label>
 
