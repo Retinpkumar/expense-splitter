@@ -14,10 +14,10 @@ including any shape changes made during implementation.
 - No authentication (see `_docs/DECISIONS.md` #3 — no auth in v1). Group
   members are named participants, not accounts; nothing in the API is scoped
   to a logged-in user.
-- Errors: planned to be structured `4xx` responses with a message body
-  (`_docs/GITHUB_ISSUES.md` → `fix(validation): add backend input validation
-  and structured error responses`). Exact error shape is not finalized yet —
-  fill in here once that issue lands.
+- Errors: every `4xx` response is `{"detail": "<message>"}` — a single
+  human-readable string, whether raised explicitly (e.g. a duplicate member,
+  a non-summing split) or from request validation (a missing/invalid field).
+  See `_docs/DECISIONS.md` #13.
 - Monetary amounts: split amounts must sum exactly to an expense's total
   (`_docs/DECISIONS.md` #4). Currency is explicit per expense; balances are
   always reported per currency, never mixed (`_docs/DECISIONS.md` #5).

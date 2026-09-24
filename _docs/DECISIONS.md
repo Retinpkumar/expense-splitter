@@ -274,3 +274,36 @@ its types — this is a manual step, not wired into CI or a pre-commit hook.
 A future deployment (frontend and backend on different origins in
 production) will need the backend to add CORS middleware — the dev-time
 proxy does not solve that; it only avoids needing it for local development.
+
+---
+
+## 13. Structured error shape: `{"detail": "<message>"}` everywhere
+
+**Status:** Accepted
+
+**Context:** Issue `fix(validation): add backend input validation and
+structured error responses` needed to pick the "not finalized yet" error
+shape `_docs/API.md` had been placeholder-marked with since #8. Auditing
+every existing `HTTPException` raise (`groups.py`, `expenses.py`,
+`settlements.py`, `balances.py`) found they already all used
+`detail="<a string>"` — the only inconsistent case was FastAPI's own
+default handling of pydantic request-validation failures (missing fields,
+`Field(gt=0)` violations, `@model_validator` errors), which returns
+`detail` as an array of `{loc, msg, type}` objects instead of a string.
+
+**Decision:** Every `4xx` response body is `{"detail": "<message>"}`, a
+single human-readable string. A `RequestValidationError` exception handler
+in `backend/app/main.py` normalizes pydantic's default array shape down to
+this same shape, taking the first error's `msg` and stripping pydantic's
+`"Value error, "` prefix on custom `@model_validator`/`@field_validator`
+messages (e.g. `"Value error, from_member_id and to_member_id must
+differ"` → `"from_member_id and to_member_id must differ"`). No other code
+changes were needed — existing `HTTPException` raises already conformed.
+
+**Consequences:** A single global handler covers every current and future
+endpoint automatically; no per-router changes are needed to stay
+conformant. Multi-error validation failures (e.g. two missing fields at
+once) only surface the first error's message, not all of them — acceptable
+for a v1 API with no field-level error UI on the frontend yet. If the
+frontend later needs field-level detail (e.g. to highlight a specific
+input), this shape would need revisiting.
