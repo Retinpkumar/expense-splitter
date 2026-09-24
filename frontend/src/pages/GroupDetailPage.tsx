@@ -150,6 +150,7 @@ export function GroupDetailPage() {
 
       setSettleAmount("");
       const balancesRequestId = ++latestBalancesRequestIdRef.current;
+      setBalancesState({ status: "loading" });
       const result = await loadBalances(groupId_);
       if (latestBalancesRequestIdRef.current === balancesRequestId) setBalancesState(result);
     } catch {
