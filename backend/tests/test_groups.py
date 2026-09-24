@@ -45,6 +45,7 @@ def test_create_group_requires_name(client):
     response = client.post("/groups", json={})
 
     assert response.status_code == 422
+    assert response.json() == {"detail": "Field required"}
 
 
 def test_add_member_returns_created_member(client):
@@ -65,6 +66,7 @@ def test_add_member_requires_name(client):
     response = client.post(f"/groups/{group['id']}/members", json={})
 
     assert response.status_code == 422
+    assert response.json() == {"detail": "Field required"}
 
 
 def test_add_member_rejects_duplicate_name_in_same_group(client):
@@ -74,6 +76,7 @@ def test_add_member_rejects_duplicate_name_in_same_group(client):
     response = client.post(f"/groups/{group['id']}/members", json={"name": "Asha"})
 
     assert response.status_code == 400
+    assert response.json() == {"detail": "Member with this name already exists in the group"}
 
 
 def test_add_member_allows_same_name_in_different_groups(client):

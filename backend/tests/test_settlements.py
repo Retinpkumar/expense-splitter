@@ -155,6 +155,7 @@ def test_settlement_rejects_non_positive_amount(client):
     )
 
     assert response.status_code == 422
+    assert response.json() == {"detail": "Input should be greater than 0"}
 
 
 def test_settlement_rejects_same_from_and_to_member(client):
@@ -172,6 +173,7 @@ def test_settlement_rejects_same_from_and_to_member(client):
     )
 
     assert response.status_code == 422
+    assert response.json() == {"detail": "from_member_id and to_member_id must differ"}
 
 
 def test_settlement_with_nonexistent_member_returns_422(client):
@@ -188,3 +190,4 @@ def test_settlement_with_nonexistent_member_returns_422(client):
     )
 
     assert response.status_code == 422
+    assert response.json() == {"detail": "from_member_id or to_member_id does not exist"}

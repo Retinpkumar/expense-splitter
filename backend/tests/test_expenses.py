@@ -110,6 +110,7 @@ def test_create_expense_rejects_splits_that_do_not_sum_to_amount(client):
     )
 
     assert response.status_code == 422
+    assert response.json() == {"detail": "Split amounts must sum to the expense amount"}
 
 
 def test_create_expense_for_missing_group_returns_404(client):
