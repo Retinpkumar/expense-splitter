@@ -54,7 +54,9 @@ edit either file by hand.
 
 - No direct pushes to `main`
 - All changes via Pull Request
-- At least 1 review required before merge
+- At least 1 review required before merge — satisfied by running the
+  `code-review` Claude Code skill (`.claude/skills/code-review.md`) against
+  the PR's diff (see `_docs/PROCESS.md` → "Code Review")
 - CI must pass before merge
 
 ## CI (Phase 0 skeleton — deploy pipeline comes later, in Phase 3)
