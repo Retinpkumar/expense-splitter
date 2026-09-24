@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { apiClient } from "../api/client";
 import { extractErrorMessage } from "../api/errors";
+import { parseAmount, toCents } from "../api/money";
 import type { Expense, Member } from "../api/types";
 
 type Props = {
@@ -8,28 +9,6 @@ type Props = {
   members: Member[];
   onCreated: (expense: Expense) => void;
 };
-
-// Plain decimal literal, at most 2 fractional digits — rejects hex/
-// scientific notation, leading "+", "Infinity"/"NaN", and other
-// numeric-literal forms JS's Number() would otherwise accept but the
-// backend's Decimal(12,2) column would reject or silently truncate.
-// Restricting to whole cents also keeps toCents() exact: with no more
-// than 2 decimal digits, Math.round(value * 100) never needs to correct
-// a float-representation error, so summing already-rounded cents (rather
-// than summing raw floats and rounding once) can't drift for any input
-// this pattern accepts.
-const DECIMAL_PATTERN = /^-?\d+(\.\d{1,2})?$/;
-
-/** Parses a decimal-string amount, or null if invalid/empty. */
-function parseAmount(value: string): number | null {
-  const trimmed = value.trim();
-  return DECIMAL_PATTERN.test(trimmed) ? Number(trimmed) : null;
-}
-
-/** Converts a dollar amount (at most 2 decimal digits) to integer cents. */
-function toCents(value: number): number {
-  return Math.round(value * 100);
-}
 
 function formatCents(cents: number): string {
   return (cents / 100).toFixed(2);
