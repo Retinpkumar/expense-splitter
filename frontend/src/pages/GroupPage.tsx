@@ -1,8 +1,11 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "../api/client";
 import { extractErrorMessage } from "../api/errors";
+import { makeMemberLabel } from "../api/memberLabel";
 import type { Expense, Group, Member } from "../api/types";
 import { ExpenseForm } from "../components/ExpenseForm";
+import { ExpenseList } from "../components/ExpenseList";
 
 export function GroupPage() {
   const [group, setGroup] = useState<Group | null>(null);
@@ -93,6 +96,11 @@ export function GroupPage() {
       {group && (
         <section>
           <h2>{group.name}</h2>
+          <p>
+            <Link to={`/groups/${group.id}`} state={{ name: group.name, members }}>
+              View group details
+            </Link>
+          </p>
 
           <form onSubmit={handleAddMember}>
             <label>
@@ -126,23 +134,7 @@ export function GroupPage() {
           {expenses.length > 0 && (
             <section>
               <h3>Expenses</h3>
-              <ul>
-                {expenses.map((expense) => (
-                  <li key={expense.id}>
-                    {expense.amount} {expense.currency} paid by{" "}
-                    {members.find((member) => member.id === expense.payer_id)?.name ??
-                      `member ${expense.payer_id}`}{" "}
-                    (
-                    {expense.splits
-                      .map(
-                        (split) =>
-                          `${members.find((member) => member.id === split.member_id)?.name ?? `member ${split.member_id}`}: ${split.amount}`,
-                      )
-                      .join(", ")}
-                    )
-                  </li>
-                ))}
-              </ul>
+              <ExpenseList expenses={expenses} memberLabel={makeMemberLabel(members)} />
             </section>
           )}
         </section>
