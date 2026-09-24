@@ -21,6 +21,7 @@ frontend's dev server proxies API requests to it.
 ```bash
 cd backend
 uv sync                                 # install deps, create .venv/
+uv run alembic upgrade head             # create/update the SQLite schema
 uv run pytest                           # run the test suite
 uv run uvicorn app.main:app --reload    # dev server on http://127.0.0.1:8000
 ```
