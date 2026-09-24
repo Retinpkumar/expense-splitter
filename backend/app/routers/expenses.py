@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
 from app.models import Expense, Group
@@ -41,6 +41,7 @@ def list_expenses(group_id: int, db: Session = Depends(get_db)) -> list[Expense]
 
     return (
         db.query(Expense)
+        .options(selectinload(Expense.splits))
         .filter(Expense.group_id == group_id)
         .order_by(Expense.created_at.desc(), Expense.id.desc())
         .all()
