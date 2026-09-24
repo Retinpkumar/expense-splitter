@@ -1,7 +1,8 @@
 /**
- * FastAPI error bodies vary by source: a plain HTTPException has a string
- * `detail`, while a pydantic validation error has a `detail` array of
- * `{msg, ...}` objects. Handle both defensively without assuming a shape.
+ * Every 4xx response is `{"detail": "<message>"}` per `_docs/DECISIONS.md`
+ * #13 — a plain string. The array-shaped `detail` (pydantic's pre-#13
+ * default validation-error shape) is handled too, defensively, in case a
+ * future endpoint bypasses the backend's normalizing exception handler.
  */
 export function extractErrorMessage(error: unknown): string | null {
   if (!error || typeof error !== "object" || !("detail" in error)) {
