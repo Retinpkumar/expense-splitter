@@ -63,6 +63,9 @@ Rules:
   inputs, and Definition of Done.
 - `_docs/team/qa.md` — the QA role's verification steps and PASS/FAIL
   reporting bar.
+- `_docs/team/orchestrator.md` — the Orchestrator's loop: how it drives one
+  issue through PM → Engineer → QA → Code Review to merge-ready, and where
+  it stops.
 
 ### Source-of-Truth Rule
 
@@ -124,21 +127,13 @@ issue's acceptance criteria.
 
 ## Orchestrator
 
-The main session is the orchestrator.
+The main session is the orchestrator. It drives one issue at a time through
+PM → Engineer → QA → Code Review, looping between roles without pausing for
+confirmation, until the issue is merge-ready or genuinely blocked — merging
+itself always waits for explicit human approval (`AGENTS.md`).
 
-The orchestrator:
-- Selects the next wave of issues from the backlog.
-- Determines dependency order using each issue's `Depends on:` list.
-- Coordinates PM, Engineer, and QA agents.
-- Owns worktree/branch allocation.
-- Controls the integration/merge queue.
-- Integrates completed work into `main`.
-- Closes completed issues.
-
-The orchestrator does not:
-- Groom tasks itself.
-- Implement tasks itself.
-- Perform QA itself.
+Follows: `_docs/team/orchestrator.md` for the full loop, its stopping
+points, and what it does and does not do itself.
 
 ## Working in Parallel
 
