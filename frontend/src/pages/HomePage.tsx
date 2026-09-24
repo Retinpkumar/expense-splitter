@@ -12,14 +12,20 @@ export function HomePage() {
   useEffect(() => {
     let cancelled = false;
 
-    apiClient.GET("/health").then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) {
+    apiClient
+      .GET("/health")
+      .then(({ data, response }) => {
+        if (cancelled) return;
+        if (!response.ok || data === undefined) {
+          setHealth({ status: "error", message: "Failed to reach the API" });
+          return;
+        }
+        setHealth({ status: "ok", body: JSON.stringify(data) });
+      })
+      .catch(() => {
+        if (cancelled) return;
         setHealth({ status: "error", message: "Failed to reach the API" });
-        return;
-      }
-      setHealth({ status: "ok", body: JSON.stringify(data) });
-    });
+      });
 
     return () => {
       cancelled = true;
