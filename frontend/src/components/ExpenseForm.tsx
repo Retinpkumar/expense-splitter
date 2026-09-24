@@ -9,11 +9,15 @@ type Props = {
   onCreated: (expense: Expense) => void;
 };
 
+// Plain decimal literal only — rejects hex/scientific notation, leading
+// "+", "Infinity"/"NaN", and other numeric-literal forms JS's Number()
+// would otherwise accept but the backend's Decimal() parser would reject.
+const DECIMAL_PATTERN = /^-?\d+(\.\d+)?$/;
+
 /** Parses a decimal-string amount, or null if invalid/empty. */
 function parseAmount(value: string): number | null {
-  if (value.trim() === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  const trimmed = value.trim();
+  return DECIMAL_PATTERN.test(trimmed) ? Number(trimmed) : null;
 }
 
 /**
@@ -50,11 +54,11 @@ export function ExpenseForm({ groupId, members, onCreated }: Props) {
     setSubmitError(null);
 
     const amountValue = parseAmount(amount);
-    if (amountValue === null || amountValue <= 0) {
+    const amountCents = amountValue === null ? null : toCents(amountValue);
+    if (amountCents === null || amountCents <= 0) {
       setValidationError("Enter a valid amount greater than zero");
       return;
     }
-    const amountCents = toCents(amountValue);
 
     if (payerId === "") {
       setValidationError("Select a payer");
@@ -77,7 +81,7 @@ export function ExpenseForm({ groupId, members, onCreated }: Props) {
         setValidationError("Split amounts must be numbers");
         return;
       }
-      if (value <= 0) {
+      if (toCents(value) <= 0) {
         setValidationError("Split amounts must be greater than zero");
         return;
       }
