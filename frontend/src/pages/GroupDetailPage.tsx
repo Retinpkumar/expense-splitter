@@ -59,29 +59,31 @@ export function GroupDetailPage() {
   const [settleError, setSettleError] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
 
-  // Monotonic counter identifying the latest load attempt (including the
-  // post-settlement balance refresh, which runs outside this effect).
-  // Comparing a request's own id against the current counter — rather than
-  // against the groupId it was for — correctly discards a stale response
-  // even when it's for the *same* group as the latest request: a fetch
-  // isn't just stale when the group changes, it's stale whenever a newer
-  // fetch has since been issued for any reason (revisiting the same group
-  // before the first request resolved, unmounting, or a settle-triggered
-  // refresh in flight at the same time as the initial load).
-  const latestRequestIdRef = useRef(0);
+  // Monotonic counters identifying the latest load attempt for each data
+  // stream. Comparing a request's own id against the current counter —
+  // rather than against the groupId it was for — correctly discards a
+  // stale response even when it's for the *same* group as the latest
+  // request (e.g. revisiting a group before its first load resolved).
+  // Expenses and balances get separate counters because the
+  // post-settlement refresh only re-issues a balances request: sharing one
+  // counter would make that refresh look "newer" than the still-in-flight
+  // initial expenses request, permanently discarding its result.
+  const latestExpensesRequestIdRef = useRef(0);
+  const latestBalancesRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (groupId_ === null) return;
 
-    const requestId = ++latestRequestIdRef.current;
+    const expensesRequestId = ++latestExpensesRequestIdRef.current;
+    const balancesRequestId = ++latestBalancesRequestIdRef.current;
     setExpensesState({ status: "loading" });
     setBalancesState({ status: "loading" });
 
     loadExpenses(groupId_).then((result) => {
-      if (latestRequestIdRef.current === requestId) setExpensesState(result);
+      if (latestExpensesRequestIdRef.current === expensesRequestId) setExpensesState(result);
     });
     loadBalances(groupId_).then((result) => {
-      if (latestRequestIdRef.current === requestId) setBalancesState(result);
+      if (latestBalancesRequestIdRef.current === balancesRequestId) setBalancesState(result);
     });
   }, [groupId_]);
 
@@ -147,9 +149,9 @@ export function GroupDetailPage() {
       }
 
       setSettleAmount("");
-      const requestId = ++latestRequestIdRef.current;
+      const balancesRequestId = ++latestBalancesRequestIdRef.current;
       const result = await loadBalances(groupId_);
-      if (latestRequestIdRef.current === requestId) setBalancesState(result);
+      if (latestBalancesRequestIdRef.current === balancesRequestId) setBalancesState(result);
     } catch {
       setSettleError("Failed to record settlement");
     } finally {
