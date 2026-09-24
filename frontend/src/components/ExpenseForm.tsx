@@ -1,17 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { apiClient } from "../api/client";
 import { extractErrorMessage } from "../api/errors";
-
-type Member = { id: number; name: string };
-
-type ExpenseSplit = { member_id: number; amount: string };
-type Expense = {
-  id: number;
-  amount: string;
-  currency: string;
-  payer_id: number;
-  splits: ExpenseSplit[];
-};
+import type { Expense, Member } from "../api/types";
 
 type Props = {
   groupId: number;
@@ -19,12 +9,22 @@ type Props = {
   onCreated: (expense: Expense) => void;
 };
 
-/** Converts a decimal-string amount to integer cents, or null if invalid. */
-function toCents(value: string): number | null {
+/** Parses a decimal-string amount, or null if invalid/empty. */
+function parseAmount(value: string): number | null {
   if (value.trim() === "") return null;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return null;
-  return Math.round(parsed * 100);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * Converts a dollar amount to integer cents. Applied once to a total (after
+ * summing raw values), not per-split — rounding each split independently
+ * before summing can make a mathematically exact sum appear mismatched
+ * (e.g. 5.005 + 4.995 = 10.00, but Math.round(500.5) + Math.round(499.5)
+ * = 501 + 500 = 1001 cents, not 1000).
+ */
+function toCents(value: number): number {
+  return Math.round(value * 100);
 }
 
 function formatCents(cents: number): string {
@@ -49,11 +49,13 @@ export function ExpenseForm({ groupId, members, onCreated }: Props) {
     setValidationError(null);
     setSubmitError(null);
 
-    const amountCents = toCents(amount);
-    if (amountCents === null || amountCents <= 0) {
+    const amountValue = parseAmount(amount);
+    if (amountValue === null || amountValue <= 0) {
       setValidationError("Enter a valid amount greater than zero");
       return;
     }
+    const amountCents = toCents(amountValue);
+
     if (payerId === "") {
       setValidationError("Select a payer");
       return;
@@ -68,15 +70,20 @@ export function ExpenseForm({ groupId, members, onCreated }: Props) {
       return;
     }
 
-    let splitCentsTotal = 0;
+    let splitDollarTotal = 0;
     for (const entry of splitEntries) {
-      const cents = toCents(entry.raw);
-      if (cents === null) {
+      const value = parseAmount(entry.raw);
+      if (value === null) {
         setValidationError("Split amounts must be numbers");
         return;
       }
-      splitCentsTotal += cents;
+      if (value <= 0) {
+        setValidationError("Split amounts must be greater than zero");
+        return;
+      }
+      splitDollarTotal += value;
     }
+    const splitCentsTotal = toCents(splitDollarTotal);
 
     if (splitCentsTotal !== amountCents) {
       setValidationError(

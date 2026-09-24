@@ -1,18 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { apiClient } from "../api/client";
 import { extractErrorMessage } from "../api/errors";
+import type { Expense, Group, Member } from "../api/types";
 import { ExpenseForm } from "../components/ExpenseForm";
-
-type Group = { id: number; name: string };
-type Member = { id: number; name: string };
-type ExpenseSplit = { member_id: number; amount: string };
-type Expense = {
-  id: number;
-  amount: string;
-  currency: string;
-  payer_id: number;
-  splits: ExpenseSplit[];
-};
 
 export function GroupPage() {
   const [group, setGroup] = useState<Group | null>(null);
