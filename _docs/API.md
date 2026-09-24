@@ -171,8 +171,7 @@ Net balances per member, grouped by currency — never mixed across currencies
 
 ### `POST /groups/{id}/settlements`
 
-**Status:** Planned (`_docs/GITHUB_ISSUES.md` → `feat(settlements): add
-settle-up endpoint`)
+**Status:** Implemented (`feat(settlements): add settle-up endpoint`)
 
 Record a payment between two members. Over-settlement (paying more than
 currently owed) is allowed, not rejected (`_docs/DECISIONS.md` #7).
