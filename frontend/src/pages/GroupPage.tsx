@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "../api/client";
 import { extractErrorMessage } from "../api/errors";
 import type { Expense, Group, Member } from "../api/types";
@@ -93,6 +94,11 @@ export function GroupPage() {
       {group && (
         <section>
           <h2>{group.name}</h2>
+          <p>
+            <Link to={`/groups/${group.id}`} state={{ name: group.name, members }}>
+              View group details
+            </Link>
+          </p>
 
           <form onSubmit={handleAddMember}>
             <label>
