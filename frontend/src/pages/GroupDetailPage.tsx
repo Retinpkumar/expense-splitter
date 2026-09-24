@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { apiClient } from "../api/client";
+import { makeMemberLabel } from "../api/memberLabel";
 import type { Balances, Expense, Member } from "../api/types";
+import { ExpenseList } from "../components/ExpenseList";
 
 type LoadState<T> =
   | { status: "loading" }
@@ -14,13 +16,18 @@ export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const location = useLocation();
   const navigationState = (location.state as NavigationState | null) ?? {};
-  const groupId_ = Number(groupId);
+  const parsedGroupId = Number(groupId);
+  const groupId_ = Number.isInteger(parsedGroupId) ? parsedGroupId : null;
 
   const [expensesState, setExpensesState] = useState<LoadState<Expense[]>>({ status: "loading" });
   const [balancesState, setBalancesState] = useState<LoadState<Balances>>({ status: "loading" });
 
   useEffect(() => {
+    if (groupId_ === null) return;
+
     let cancelled = false;
+    setExpensesState({ status: "loading" });
+    setBalancesState({ status: "loading" });
 
     apiClient
       .GET("/groups/{group_id}/expenses", { params: { path: { group_id: groupId_ } } })
@@ -55,8 +62,15 @@ export function GroupDetailPage() {
     };
   }, [groupId_]);
 
-  function memberLabel(memberId: number): string {
-    return navigationState.members?.find((member) => member.id === memberId)?.name ?? `member ${memberId}`;
+  const memberLabel = makeMemberLabel(navigationState.members ?? []);
+
+  if (groupId_ === null) {
+    return (
+      <main>
+        <h1>Invalid group</h1>
+        <p role="alert">The group id in the URL is not valid.</p>
+      </main>
+    );
   }
 
   return (
@@ -69,17 +83,7 @@ export function GroupDetailPage() {
         {expensesState.status === "error" && <p role="alert">{expensesState.message}</p>}
         {expensesState.status === "ready" && expensesState.data.length === 0 && <p>No expenses yet.</p>}
         {expensesState.status === "ready" && expensesState.data.length > 0 && (
-          <ul>
-            {expensesState.data.map((expense) => (
-              <li key={expense.id}>
-                {expense.amount} {expense.currency} paid by {memberLabel(expense.payer_id)} (
-                {expense.splits
-                  .map((split) => `${memberLabel(split.member_id)}: ${split.amount}`)
-                  .join(", ")}
-                )
-              </li>
-            ))}
-          </ul>
+          <ExpenseList expenses={expensesState.data} memberLabel={memberLabel} />
         )}
       </section>
 
