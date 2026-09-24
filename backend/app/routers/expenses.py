@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
 from app.models import Expense, Group
@@ -27,3 +27,22 @@ def add_expense(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
+
+
+@router.get(
+    "/{group_id}/expenses",
+    response_model=list[ExpenseRead],
+    status_code=status.HTTP_200_OK,
+)
+def list_expenses(group_id: int, db: Session = Depends(get_db)) -> list[Expense]:
+    group = db.get(Group, group_id)
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+
+    return (
+        db.query(Expense)
+        .options(selectinload(Expense.splits))
+        .filter(Expense.group_id == group_id)
+        .order_by(Expense.created_at.desc(), Expense.id.desc())
+        .all()
+    )

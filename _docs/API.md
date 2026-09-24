@@ -122,8 +122,7 @@ Create an expense with custom per-member splits (not necessarily even —
 
 ### `GET /groups/{id}/expenses`
 
-**Status:** Planned (`_docs/GITHUB_ISSUES.md` → `feat(expenses): add expense
-history endpoint`)
+**Status:** Implemented (`feat(expenses): add expense history endpoint`)
 
 List all expenses for a group, most recent first.
 
@@ -132,6 +131,7 @@ List all expenses for a group, most recent first.
 [
   {
     "id": 42,
+    "group_id": 1,
     "amount": 1200.00,
     "currency": "INR",
     "payer_id": 5,
