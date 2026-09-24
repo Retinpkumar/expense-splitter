@@ -9,10 +9,16 @@ type Props = {
   onCreated: (expense: Expense) => void;
 };
 
-// Plain decimal literal only — rejects hex/scientific notation, leading
-// "+", "Infinity"/"NaN", and other numeric-literal forms JS's Number()
-// would otherwise accept but the backend's Decimal() parser would reject.
-const DECIMAL_PATTERN = /^-?\d+(\.\d+)?$/;
+// Plain decimal literal, at most 2 fractional digits — rejects hex/
+// scientific notation, leading "+", "Infinity"/"NaN", and other
+// numeric-literal forms JS's Number() would otherwise accept but the
+// backend's Decimal(12,2) column would reject or silently truncate.
+// Restricting to whole cents also keeps toCents() exact: with no more
+// than 2 decimal digits, Math.round(value * 100) never needs to correct
+// a float-representation error, so summing already-rounded cents (rather
+// than summing raw floats and rounding once) can't drift for any input
+// this pattern accepts.
+const DECIMAL_PATTERN = /^-?\d+(\.\d{1,2})?$/;
 
 /** Parses a decimal-string amount, or null if invalid/empty. */
 function parseAmount(value: string): number | null {
@@ -20,13 +26,7 @@ function parseAmount(value: string): number | null {
   return DECIMAL_PATTERN.test(trimmed) ? Number(trimmed) : null;
 }
 
-/**
- * Converts a dollar amount to integer cents. Applied once to a total (after
- * summing raw values), not per-split — rounding each split independently
- * before summing can make a mathematically exact sum appear mismatched
- * (e.g. 5.005 + 4.995 = 10.00, but Math.round(500.5) + Math.round(499.5)
- * = 501 + 500 = 1001 cents, not 1000).
- */
+/** Converts a dollar amount (at most 2 decimal digits) to integer cents. */
 function toCents(value: number): number {
   return Math.round(value * 100);
 }
@@ -74,20 +74,20 @@ export function ExpenseForm({ groupId, members, onCreated }: Props) {
       return;
     }
 
-    let splitDollarTotal = 0;
+    let splitCentsTotal = 0;
     for (const entry of splitEntries) {
       const value = parseAmount(entry.raw);
       if (value === null) {
         setValidationError("Split amounts must be numbers");
         return;
       }
-      if (toCents(value) <= 0) {
+      const cents = toCents(value);
+      if (cents <= 0) {
         setValidationError("Split amounts must be greater than zero");
         return;
       }
-      splitDollarTotal += value;
+      splitCentsTotal += cents;
     }
-    const splitCentsTotal = toCents(splitDollarTotal);
 
     if (splitCentsTotal !== amountCents) {
       setValidationError(
