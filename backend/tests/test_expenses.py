@@ -124,3 +124,47 @@ def test_create_expense_for_missing_group_returns_404(client):
     )
 
     assert response.status_code == 404
+
+
+def test_list_expenses_returns_empty_list_for_group_with_no_expenses(client):
+    group, _ = _create_group_with_members(client, ["Asha", "Ravi"])
+
+    response = client.get(f"/groups/{group['id']}/expenses")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_expenses_returns_most_recent_first(client):
+    group, members = _create_group_with_members(client, ["Asha", "Ravi"])
+
+    first = client.post(
+        f"/groups/{group['id']}/expenses",
+        json={
+            "amount": "100.00",
+            "currency": "INR",
+            "payer_id": members[0]["id"],
+            "splits": [{"member_id": members[0]["id"], "amount": "100.00"}],
+        },
+    ).json()
+    second = client.post(
+        f"/groups/{group['id']}/expenses",
+        json={
+            "amount": "200.00",
+            "currency": "INR",
+            "payer_id": members[1]["id"],
+            "splits": [{"member_id": members[1]["id"], "amount": "200.00"}],
+        },
+    ).json()
+
+    response = client.get(f"/groups/{group['id']}/expenses")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [expense["id"] for expense in body] == [second["id"], first["id"]]
+
+
+def test_list_expenses_for_missing_group_returns_404(client):
+    response = client.get("/groups/999/expenses")
+
+    assert response.status_code == 404
