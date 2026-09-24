@@ -13,9 +13,17 @@ async def validation_exception_handler(
 ) -> JSONResponse:
     """Normalizes pydantic's default validation-error array into the same
     `{"detail": "<message>"}` shape every explicitly-raised HTTPException in
-    this app already uses (see `_docs/DECISIONS.md`)."""
-    message = exc.errors()[0]["msg"]
-    message = message.removeprefix("Value error, ")
+    this app already uses (see `_docs/DECISIONS.md`).
+
+    For a custom `@model_validator`/`@field_validator` failure, pydantic
+    prefixes the message with its error type (e.g. "Value error, ..." for a
+    raised `ValueError`, "Assertion failed, ..." for a failed `assert`).
+    `ctx.error` holds the original exception before that prefixing, so read
+    from there instead of trying to strip every prefix pydantic might use.
+    """
+    error = exc.errors()[0]
+    original_error = error.get("ctx", {}).get("error")
+    message = str(original_error) if original_error is not None else error["msg"]
     return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": message})
 
 
