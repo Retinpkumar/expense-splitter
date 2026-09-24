@@ -8,7 +8,7 @@ expenses with a split ratio, and see who owes whom.
 
 ## Prerequisites
 
-- Python 3.11+ and [`uv`](https://docs.astral.sh/uv/) for the backend
+- Python 3.12+ and [`uv`](https://docs.astral.sh/uv/) for the backend
 - Node.js 20+ and npm for the frontend
 
 ## Setup
@@ -42,7 +42,9 @@ With both running, open http://localhost:5173.
 - `backend/app/main.py` — FastAPI app entrypoint; routers are included here.
 - `backend/app/routers/` — API route handlers (one module per resource).
 - `backend/app/schemas/` — Pydantic request/response models.
-- `backend/app/models/` — data models (ORM models once persistence is added).
+- `backend/app/models/` — SQLAlchemy ORM models (users, groups, expenses,
+  splits, settlements), with schema managed via Alembic migrations in
+  `backend/alembic/`.
 - `backend/app/services/` — business logic kept independent of the HTTP
   layer (e.g. balance calculation).
 - `backend/tests/` — pytest suite, mirrors the `app/` layout.
