@@ -1,9 +1,13 @@
 from decimal import Decimal
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app.db import get_db
+from app.main import app
 from app.models import Base, Expense, ExpenseSplit, Group, GroupMember, Settlement, User
 from app.services.balances import calculate_balances
 
@@ -184,3 +188,90 @@ def test_group_with_no_expenses_or_settlements_returns_empty_dict(session):
     balances = calculate_balances(session, group.id)
 
     assert balances == {}
+
+
+@pytest.fixture()
+def client():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as test_client:
+        yield test_client, TestingSessionLocal
+    app.dependency_overrides.clear()
+
+
+def _create_group_with_members(client, member_names):
+    group = client.post("/groups", json={"name": "Trip to Goa"}).json()
+    members = [
+        client.post(f"/groups/{group['id']}/members", json={"name": name}).json()
+        for name in member_names
+    ]
+    return group, members
+
+
+def test_balances_endpoint_matches_direct_service_call(client):
+    test_client, SessionLocal = client
+    group, members = _create_group_with_members(test_client, ["Asha", "Ravi"])
+
+    test_client.post(
+        f"/groups/{group['id']}/expenses",
+        json={
+            "amount": "1200.00",
+            "currency": "INR",
+            "payer_id": members[0]["id"],
+            "splits": [
+                {"member_id": members[0]["id"], "amount": "600.00"},
+                {"member_id": members[1]["id"], "amount": "600.00"},
+            ],
+        },
+    )
+
+    response = test_client.get(f"/groups/{group['id']}/balances")
+
+    assert response.status_code == 200
+
+    with SessionLocal() as session:
+        expected = calculate_balances(session, group["id"])
+
+    assert response.json() == {
+        currency: [
+            {
+                "from_member_id": entry["from_member_id"],
+                "to_member_id": entry["to_member_id"],
+                "amount": str(entry["amount"]),
+            }
+            for entry in entries
+        ]
+        for currency, entries in expected.items()
+    }
+
+
+def test_balances_endpoint_returns_empty_result_for_group_with_no_activity(client):
+    test_client, _ = client
+    group, _ = _create_group_with_members(test_client, ["Asha", "Ravi"])
+
+    response = test_client.get(f"/groups/{group['id']}/balances")
+
+    assert response.status_code == 200
+    assert response.json() == {}
+
+
+def test_balances_endpoint_for_missing_group_returns_404(client):
+    test_client, _ = client
+
+    response = test_client.get("/groups/999/balances")
+
+    assert response.status_code == 404

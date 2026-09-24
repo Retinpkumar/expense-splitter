@@ -150,9 +150,8 @@ Empty group returns `[]`.
 
 ### `GET /groups/{id}/balances`
 
-**Status:** Planned (`_docs/GITHUB_ISSUES.md` → `feat(balances): expose
-balances endpoint`, backed by the service from `feat(balances): add balance
-calculation service`)
+**Status:** Implemented (`feat(balances): expose balances endpoint`, backed
+by `feat(balances): add balance calculation service`)
 
 Net balances per member, grouped by currency — never mixed across currencies
 (`_docs/DECISIONS.md` #5). Derived from `expenses`/`expense_splits` minus
